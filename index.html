@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diagnóstico Código da Consistência</title>
+  <title>Questionário Onboarding da Mentoria CDC</title>
   <style>
     :root {
       --bg: #f6f7f9;
@@ -318,6 +318,56 @@
     .status {
       margin-top: 14px;
       font-size: 14px;
+      color: var(--muted);
+    }
+
+    .summary-box {
+      margin-top: 22px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fafafa;
+    }
+
+    .summary-box h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      letter-spacing: -.015em;
+    }
+
+    .summary-box > p {
+      margin-bottom: 16px;
+    }
+
+    .insight-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .insight-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 15px 16px;
+    }
+
+    .insight-card strong {
+      display: block;
+      color: #111827;
+      margin-bottom: 5px;
+      font-size: 15px;
+    }
+
+    .insight-card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .summary-note {
+      margin-top: 16px;
+      font-size: 12px;
+      line-height: 1.5;
       color: var(--muted);
     }
 
@@ -724,8 +774,172 @@
       return result;
     }
 
+    function buildProfileSummary(scores) {
+      const interpretations = {
+        conscienciosidade: {
+          title: "Organização e estrutura",
+          low: "Você pode funcionar melhor quando a rotina exige poucas decisões e tem passos simples e bem definidos. No acompanhamento, vamos priorizar metas enxutas, lembretes e um plano fácil de retomar.",
+          mid: "Você tende a se beneficiar de alguma estrutura, mas sem excesso de rigidez. Vamos trabalhar com metas claras e espaço para ajustar a semana quando necessário.",
+          high: "Você tende a responder bem a planejamento, metas claras e acompanhamento do progresso. Ao mesmo tempo, vamos evitar que organização vire rigidez quando a semana sair do planejado."
+        },
+        estabilidade_emocional: {
+          title: "Adaptação a imprevistos",
+          low: "Mudanças e semanas mais difíceis podem ter um impacto maior no seu ritmo. Por isso, vamos preparar planos B e formas simples de retomar o treino sem transformar um imprevisto em abandono.",
+          mid: "Você parece alternar bem entre estabilidade e momentos em que os imprevistos pesam mais. Vamos usar uma rotina com margem de adaptação e regras claras para retomada.",
+          high: "Você tende a conseguir se reorganizar com relativa facilidade quando algo sai do planejado. Podemos aproveitar isso usando uma rotina flexível, sem perder uma direção clara."
+        },
+        abertura: {
+          title: "Variedade e novidade",
+          low: "Você pode se sentir mais confortável com exercícios e rotinas previsíveis. Vamos priorizar progressões graduais e mudanças apenas quando elas realmente acrescentarem algo ao seu treino.",
+          mid: "Você parece equilibrar bem previsibilidade e novidade. Podemos manter uma base estável de treino e inserir mudanças pontuais quando fizerem sentido.",
+          high: "Você tende a gostar de aprender e experimentar formas diferentes de fazer as coisas. Podemos usar variedade planejada para manter interesse sem perder a progressão."
+        },
+        extroversao: {
+          title: "Energia e ambiente",
+          low: "Você pode funcionar melhor com mais autonomia e menos dependência de interação social para treinar. Vamos considerar isso na forma de acompanhamento e no ambiente do treino.",
+          mid: "Você parece conseguir funcionar tanto com autonomia quanto com interação. Podemos alternar acompanhamento mais próximo e momentos de independência conforme sua necessidade.",
+          high: "A interação com outras pessoas pode ser uma fonte importante de energia e compromisso para você. Podemos aproveitar isso com acompanhamento mais presente e estratégias de responsabilidade compartilhada."
+        },
+        amabilidade: {
+          title: "Forma de acompanhamento",
+          low: "Você pode valorizar objetividade, autonomia e decisões mais diretas. No acompanhamento, vamos buscar orientações claras e espaço para você entender e participar das escolhas.",
+          mid: "Você parece equilibrar bem cooperação e autonomia. A ideia será construir as decisões em conjunto, sem tornar o acompanhamento excessivamente dependente.",
+          high: "Você tende a responder bem a uma relação colaborativa e a considerar bastante o contexto das pessoas ao seu redor. Vamos usar uma comunicação próxima, clara e acolhedora."
+        }
+      };
+
+      const classify = value => {
+        if (value <= 2.6) return "low";
+        if (value >= 3.7) return "high";
+        return "mid";
+      };
+
+      // Mostra apenas os 3 traços mais informativos para manter o resultado leve.
+      const priority = {
+        conscienciosidade: 5,
+        estabilidade_emocional: 4,
+        abertura: 3,
+        extroversao: 2,
+        amabilidade: 1
+      };
+
+      const selected = Object.entries(scores)
+        .map(([trait, value]) => ({
+          trait,
+          value,
+          distance: Math.abs(value - 3),
+          priority: priority[trait] || 0
+        }))
+        .sort((a, b) => (b.distance - a.distance) || (b.priority - a.priority))
+        .slice(0, 3);
+
+      return selected.map(item => {
+        const level = classify(item.value);
+        const info = interpretations[item.trait];
+        return {
+          title: info.title,
+          text: info[level]
+        };
+      });
+    }
+
+    function buildAutomatedPrognosis(scores) {
+      const levels = {};
+      Object.entries(scores).forEach(([trait, value]) => {
+        levels[trait] = value <= 2.6 ? "baixo" : value >= 3.7 ? "alto" : "moderado";
+      });
+
+      const strengths = [];
+      const attention = [];
+      const routine = [];
+      const training = [];
+      const followup = [];
+
+      // CONSCIENCIOSIDADE
+      if (levels.conscienciosidade === "alto") {
+        strengths.push("Boa tendência a responder a planejamento, metas claras e acompanhamento de progresso.");
+        attention.push("Pode transformar organização em rigidez e interpretar falhas pontuais como quebra da rotina.");
+        routine.push("Usar agenda e metas claras, mas sempre com plano B e regra explícita de retomada.");
+        training.push("Progressão estruturada, objetivos mensuráveis e registro de evolução tendem a funcionar bem.");
+      } else if (levels.conscienciosidade === "baixo") {
+        strengths.push("Pode se adaptar melhor quando a estratégia reduz decisões e simplifica a execução.");
+        attention.push("Maior risco de desorganização, adiamento e dificuldade em manter planos muito complexos.");
+        routine.push("Reduzir decisões: poucos horários possíveis, lembretes, gatilhos e meta mínima semanal.");
+        training.push("Treinos simples, previsíveis, com poucas mudanças e baixa fricção operacional.");
+      } else {
+        strengths.push("Equilíbrio entre estrutura e flexibilidade.");
+        attention.push("Pode perder consistência quando a rotina fica excessivamente rígida ou solta demais.");
+        routine.push("Metas semanais claras com liberdade moderada para reorganizar os dias.");
+        training.push("Manter uma base estável com progressão simples.");
+      }
+
+      // ESTABILIDADE EMOCIONAL
+      if (levels.estabilidade_emocional === "alto") {
+        strengths.push("Boa tendência a se reorganizar após imprevistos e lidar com oscilações da rotina.");
+        routine.push("Pode trabalhar com maior flexibilidade sem perder totalmente a direção.");
+        followup.push("Acompanhamento pode ser mais orientado a autonomia e ajustes objetivos.");
+      } else if (levels.estabilidade_emocional === "baixo") {
+        strengths.push("Tende a perceber com clareza quando algo está afetando seu bem-estar e sua rotina.");
+        attention.push("Imprevistos, frustração ou semanas difíceis podem aumentar a chance de interrupção.");
+        routine.push("Criar previamente uma versão mínima da semana e uma regra de retomada para o treino seguinte.");
+        training.push("Evitar usar o treino como mais uma fonte de cobrança em semanas difíceis.");
+        followup.push("Check-ins mais frequentes e linguagem orientada a retomada, não a culpa.");
+      } else {
+        routine.push("Manter flexibilidade moderada e plano de contingência para semanas mais exigentes.");
+      }
+
+      // ABERTURA
+      if (levels.abertura === "alto") {
+        strengths.push("Curiosidade e boa receptividade a aprender e experimentar novas estratégias.");
+        attention.push("Excesso de novidade pode competir com a progressão se não houver uma base estável.");
+        training.push("Usar variedade planejada sem trocar exercícios apenas por novidade.");
+      } else if (levels.abertura === "baixo") {
+        strengths.push("Boa tendência a se sentir confortável com processos previsíveis e repetíveis.");
+        attention.push("Mudanças frequentes podem gerar resistência desnecessária.");
+        training.push("Priorizar exercícios conhecidos, progressões graduais e mudanças com motivo claro.");
+      } else {
+        training.push("Combinar estabilidade com pequenas variações quando houver benefício real.");
+      }
+
+      // EXTROVERSÃO
+      if (levels.extroversao === "alto") {
+        strengths.push("Interação social pode aumentar energia, compromisso e disposição.");
+        routine.push("Responsabilidade compartilhada, acompanhamento e compromissos sociais podem ajudar na aderência.");
+        followup.push("Contato mais presente tende a funcionar bem.");
+      } else if (levels.extroversao === "baixo") {
+        strengths.push("Pode funcionar bem com autonomia e ambientes menos dependentes de interação social.");
+        attention.push("Estratégias baseadas apenas em grupo ou exposição social podem criar atrito.");
+        routine.push("Valorizar autonomia e opções de treino que não dependam de companhia.");
+        followup.push("Acompanhamento objetivo, sem excesso de contato desnecessário.");
+      }
+
+      // AMABILIDADE
+      if (levels.amabilidade === "alto") {
+        strengths.push("Tendência a cooperar e responder bem a uma relação de acompanhamento colaborativa.");
+        attention.push("Pode priorizar demandas de outras pessoas e deixar o próprio treino em segundo plano.");
+        routine.push("Trabalhar limites e proteger horários mínimos para o próprio treino.");
+        followup.push("Comunicação acolhedora, colaborativa e com acordos claros.");
+      } else if (levels.amabilidade === "baixo") {
+        strengths.push("Tendência a valorizar autonomia, objetividade e decisões próprias.");
+        attention.push("Pode responder mal a abordagens excessivamente diretivas ou paternalistas.");
+        followup.push("Explicar o motivo das decisões e oferecer participação real nas escolhas.");
+      }
+
+      const uniq = arr => [...new Set(arr)];
+
+      return {
+        niveis: levels,
+        pontos_fortes: uniq(strengths),
+        pontos_atencao: uniq(attention),
+        conduta_rotina: uniq(routine),
+        conduta_treino: uniq(training),
+        conduta_acompanhamento: uniq(followup)
+      };
+    }
+
     async function submitAll() {
       const scores = calculateBigFive();
+      const prognostico = buildAutomatedPrognosis(scores);
 
       const payload = {
         data_envio: new Date().toISOString(),
@@ -739,7 +953,16 @@
         score_conscienciosidade: scores.conscienciosidade,
         score_estabilidade_emocional: scores.estabilidade_emocional,
         score_abertura: scores.abertura,
-        origem: "onboarding_cdc_v1"
+
+        perfil_niveis: prognostico.niveis,
+        pontos_fortes: prognostico.pontos_fortes,
+        pontos_atencao: prognostico.pontos_atencao,
+        conduta_rotina: prognostico.conduta_rotina,
+        conduta_treino: prognostico.conduta_treino,
+        conduta_acompanhamento: prognostico.conduta_acompanhamento,
+
+        origem: "onboarding_cdc_v1",
+        versao_questionario: "v2"
       };
 
       hideProgress();
@@ -754,7 +977,7 @@
       // e mostra a tela final para permitir testar todo o fluxo visual.
       if (!WEBHOOK_URL) {
         localStorage.setItem("cdc_onboarding_last_submission", JSON.stringify(payload));
-        renderSuccess(true);
+        renderSuccess(true, scores);
         return;
       }
 
@@ -767,32 +990,46 @@
         });
 
         localStorage.setItem("cdc_onboarding_last_submission", JSON.stringify(payload));
-        renderSuccess(false);
+        renderSuccess(false, scores);
       } catch (error) {
         console.error(error);
         renderSubmitError();
       }
     }
 
-    function renderSuccess(localOnly = false) {
+    function renderSuccess(localOnly = false, scores = calculateBigFive()) {
       hideProgress();
-      card.innerHTML = `
-        <span class="eyebrow">Diagnóstico concluído</span>
-        <h1>Pronto. Agora conhecemos você um pouco melhor.</h1>
-        <p class="lead">Suas respostas serão consideradas na construção da sua estratégia dentro da Mentoria Código da Consistência.</p>
 
-        <ul class="mini-list">
-          <li>organização do seu treino;</li>
-          <li>barreiras que precisamos reduzir;</li>
-          <li>adaptação da rotina;</li>
-          <li>estratégias para facilitar sua consistência;</li>
-          <li>forma de acompanhamento mais adequada para você.</li>
-        </ul>
+      const insights = buildProfileSummary(scores);
+
+      card.innerHTML = `
+        <span class="eyebrow">Onboarding concluído</span>
+        <h1>Pronto. Já temos uma primeira leitura de como você tende a funcionar.</h1>
+        <p class="lead">Esse é apenas um resumo inicial. Suas respostas completas serão analisadas junto com sua rotina, seus objetivos e sua experiência com o treino.</p>
+
+        <div class="summary-box">
+          <h3>Seu resumo inicial</h3>
+          <p>Algumas tendências que apareceram nas suas respostas e que vamos levar em consideração nos próximos passos:</p>
+
+          <div class="insight-list">
+            ${insights.map(item => `
+              <div class="insight-card">
+                <strong>${item.title}</strong>
+                <p>${item.text}</p>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="summary-note">
+            Este resultado não é um diagnóstico psicológico e não define sua personalidade. Ele representa tendências gerais observadas neste questionário e serve como apoio para personalizar sua experiência na mentoria.
+          </div>
+        </div>
 
         <div class="example" style="margin-top:22px">
-          A ideia não é fazer você se adaptar ao método.<br>
-          <strong>É adaptar o método para que ele funcione melhor dentro da sua vida.</strong>
+          A partir daqui, vamos cruzar essas informações com o que você contou sobre sua rotina e seu treino para decidir <strong>como organizar sua frequência, reduzir barreiras e tornar sua estratégia mais fácil de manter.</strong>
         </div>
+
+        <p style="margin-top:20px"><strong>A ideia não é fazer você se adaptar ao método.</strong><br>É adaptar o método para que ele funcione melhor dentro da sua vida.</p>
 
         ${localOnly ? `<p class="status">Modo de teste: as respostas foram salvas apenas neste navegador porque o webhook ainda não foi configurado.</p>` : ""}
       `;
