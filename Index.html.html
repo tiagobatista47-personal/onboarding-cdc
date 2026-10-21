@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnóstico Código da Consistência</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --soft: #f3f4f6;
+      --primary: #111827;
+      --primary-hover: #000000;
+      --success: #166534;
+      --danger: #b91c1c;
+      --radius: 18px;
+      --shadow: 0 10px 35px rgba(17, 24, 39, .06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      width: min(760px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 52px;
+    }
+
+    .brand {
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: .04em;
+      margin-bottom: 18px;
+      color: #374151;
+    }
+
+    .progress-wrap {
+      display: none;
+      margin-bottom: 14px;
+    }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: #e9eaee;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: var(--primary);
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    h1, h2 {
+      margin: 0 0 14px;
+      line-height: 1.15;
+      letter-spacing: -.025em;
+    }
+
+    h1 { font-size: clamp(30px, 7vw, 44px); }
+    h2 { font-size: clamp(24px, 5vw, 32px); }
+
+    p {
+      margin: 0 0 14px;
+      line-height: 1.65;
+      color: #4b5563;
+    }
+
+    .lead {
+      font-size: 17px;
+    }
+
+    .time {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--soft);
+      color: #374151;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .question-title {
+      font-size: clamp(23px, 5vw, 31px);
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .question-help {
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .example {
+      background: var(--soft);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .example strong {
+      color: #374151;
+    }
+
+    textarea, input[type="text"], input[type="email"], input[type="tel"] {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      padding: 14px 15px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: .2s ease;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    textarea:focus, input:focus {
+      border-color: #6b7280;
+      box-shadow: 0 0 0 4px rgba(107, 114, 128, .10);
+    }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .scale {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .scale-option {
+      position: relative;
+    }
+
+    .scale-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scale-option label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 50px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: .15s ease;
+      background: #fff;
+    }
+
+    .scale-option label:hover {
+      border-color: #9ca3af;
+      background: #fafafa;
+    }
+
+    .scale-option input:checked + label {
+      border-color: var(--primary);
+      background: #f5f5f5;
+      box-shadow: inset 0 0 0 1px var(--primary);
+    }
+
+    .scale-dot {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #9ca3af;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .scale-option input:checked + label .scale-dot {
+      border-color: var(--primary);
+      box-shadow: inset 0 0 0 4px #fff;
+      background: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      min-width: 150px;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #4b5563;
+      padding-left: 0;
+    }
+
+    .btn-secondary:hover { color: #111827; }
+
+    .error {
+      display: none;
+      margin-top: 12px;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .mini-list {
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 9px;
+    }
+
+    .mini-list li {
+      display: flex;
+      gap: 9px;
+      color: #4b5563;
+      line-height: 1.5;
+    }
+
+    .mini-list li::before {
+      content: "✓";
+      color: var(--success);
+      font-weight: 900;
+    }
+
+    .hidden { display: none !important; }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 640px) {
+      .app { width: min(100% - 20px, 760px); padding-top: 18px; }
+      .card { padding: 24px 20px; border-radius: 16px; }
+      .fields-grid { grid-template-columns: 1fr; }
+      .actions { align-items: stretch; }
+      .btn-primary { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="brand">CÓDIGO DA CONSISTÊNCIA</div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-head">
+        <span id="progressStage">Etapa 1 de 2</span>
+        <span id="progressText">1 de 10</span>
+      </div>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
+    <section class="card" id="card"></section>
+  </main>
+
+  <script>
+    // =========================================================
+    // CONFIGURAÇÃO
+    // =========================================================
+    const WEBHOOK_URL = ""; // Cole aqui a URL do Web App do Google Apps Script.
+
+    const scaleLabels = [
+      "Discordo totalmente",
+      "Discordo",
+      "Nem concordo nem discordo",
+      "Concordo",
+      "Concordo totalmente"
+    ];
+
+    // As 15 afirmações abaixo são uma versão breve ADAPTADA para uso interno
+    // na mentoria. Elas medem tendências amplas dos cinco fatores e não devem
+    // ser apresentadas como diagnóstico psicológico ou instrumento clínico.
+    const bigFiveItems = [
+      { id: "BF01", trait: "extroversao", reverse: false, text: "Costumo me sentir à vontade para conversar e interagir com outras pessoas." },
+      { id: "BF02", trait: "amabilidade", reverse: false, text: "Costumo tentar compreender o ponto de vista das outras pessoas, mesmo quando discordo delas." },
+      { id: "BF03", trait: "conscienciosidade", reverse: false, text: "Costumo organizar minhas tarefas e compromissos com antecedência." },
+      { id: "BF04", trait: "estabilidade_emocional", reverse: true, text: "Fico facilmente preocupada ou tensa quando as coisas saem do planejado." },
+      { id: "BF05", trait: "abertura", reverse: false, text: "Gosto de experimentar novas formas de fazer as coisas." },
+
+      { id: "BF06", trait: "extroversao", reverse: true, text: "Prefiro evitar situações em que preciso interagir muito com outras pessoas." },
+      { id: "BF07", trait: "amabilidade", reverse: true, text: "Às vezes tenho pouca paciência quando as pessoas agem de uma maneira diferente da que considero correta." },
+      { id: "BF08", trait: "conscienciosidade", reverse: true, text: "Tenho dificuldade para manter organização e seguir o que planejei." },
+      { id: "BF09", trait: "estabilidade_emocional", reverse: false, text: "Mesmo em semanas difíceis, geralmente consigo recuperar a calma e reorganizar o que preciso fazer." },
+      { id: "BF10", trait: "abertura", reverse: true, text: "Prefiro fazer as coisas de maneiras conhecidas a experimentar abordagens diferentes." },
+
+      { id: "BF11", trait: "extroversao", reverse: false, text: "Atividades em grupo ou com outras pessoas costumam aumentar minha energia e disposição." },
+      { id: "BF12", trait: "amabilidade", reverse: false, text: "Costumo ser cooperativa e buscar soluções que funcionem bem para todos." },
+      { id: "BF13", trait: "conscienciosidade", reverse: false, text: "Quando assumo um compromisso comigo mesma, geralmente faço esforço para cumpri-lo." },
+      { id: "BF14", trait: "estabilidade_emocional", reverse: true, text: "Quando algo dá errado, posso ficar remoendo isso por bastante tempo." },
+      { id: "BF15", trait: "abertura", reverse: false, text: "Tenho curiosidade e gosto de aprender coisas novas." }
+    ];
+
+    const cdcQuestions = [
+      {
+        id: "cdc01_rotina",
+        title: "Como é sua rotina atualmente?",
+        help: "Conte um pouco sobre trabalho, família, horários, compromissos e como normalmente são seus dias durante a semana.",
+        example: "Trabalho das 8h às 18h, tenho dois filhos e normalmente chego em casa por volta das 19h. De manhã minha rotina é corrida e tenho mais disponibilidade às terças, quintas e sábados."
+      },
+      {
+        id: "cdc02_interrupcoes",
+        title: "Pensando nas vezes em que você tentou manter uma rotina de treino, o que normalmente fazia você diminuir a frequência ou parar?",
+        help: "Pode contar situações específicas, mesmo que pareçam pequenas.",
+        example: "Normalmente começo bem, mas quando o trabalho fica mais corrido começo a faltar. Depois de perder alguns dias, sinto que já saí da rotina e demoro para voltar."
+      },
+      {
+        id: "cdc03_semana_caotica",
+        title: "Quando sua semana fica mais corrida, acontece algum imprevisto ou você perde um treino planejado, o que costuma acontecer nos dias seguintes?",
+        help: "Queremos entender como você reage quando o planejamento não acontece como esperado.",
+        example: "Se perco um treino na segunda, tento reorganizar. Mas às vezes acabo deixando tudo para a semana seguinte."
+      },
+      {
+        id: "cdc04_tentativas",
+        title: "O que você já tentou fazer para conseguir manter uma rotina de treinos?",
+        help: "Conte o que funcionou bem, o que funcionou apenas por algum tempo e o que não funcionou.",
+        example: "Já tentei treinar cinco vezes por semana e não consegui manter. Quando fazia três vezes e deixava os dias mais flexíveis, conseguia seguir por mais tempo."
+      },
+      {
+        id: "cdc05_objetivo_principal",
+        title: "Qual é o principal resultado que você espera conquistar com a musculação neste momento?",
+        help: "Pode incluir mudanças no corpo, força, saúde, disposição, capacidade física, confiança ou outro objetivo importante.",
+        example: "Quero ganhar massa muscular, principalmente nas pernas e glúteos, me sentir mais forte e ter mais disposição no dia a dia."
+      },
+      {
+        id: "cdc06_objetivo_fisico",
+        title: "Existe alguma região do seu corpo que você gostaria de desenvolver ou algum resultado físico que seja especialmente importante para você? Por quê?",
+        help: "Não existe resposta certa. Queremos entender quais mudanças têm maior significado para você.",
+        example: "Gostaria de desenvolver mais glúteos e pernas porque é uma região em que sempre tive dificuldade de perceber evolução."
+      },
+      {
+        id: "cdc07_preferencias",
+        title: "Existem exercícios ou tipos de treino que você gosta especialmente de fazer? O que você gosta neles?",
+        help: "Pode citar exercícios específicos, aparelhos, pesos livres ou tipos de treino.",
+        example: "Gosto de exercícios para pernas e de treinos com pesos livres porque sinto que consigo perceber melhor minha evolução."
+      },
+      {
+        id: "cdc08_aversoes",
+        title: "Existem exercícios, aparelhos ou tipos de treino que você não gosta, evita ou tem dificuldade de realizar?",
+        help: "Se sim, conte o motivo: desconforto, insegurança, dificuldade técnica, experiência anterior ou simplesmente preferência pessoal.",
+        example: "Não gosto muito de avanço porque sinto dificuldade de equilíbrio. Também evito alguns aparelhos quando a academia está muito cheia."
+      },
+      {
+        id: "cdc09_desconfortos",
+        title: "Você sente atualmente algum desconforto, dor, limitação ou insegurança durante determinados movimentos ou exercícios?",
+        help: "Se sim, diga onde acontece, quais movimentos costumam provocar e há quanto tempo percebe isso. Esta pergunta não substitui avaliação médica.",
+        example: "Às vezes sinto desconforto no joelho direito quando faço agachamentos mais profundos. Isso acontece há alguns meses."
+      },
+      {
+        id: "cdc10_rotina_ideal",
+        title: "Se pudéssemos montar uma rotina de treino que realmente funcionasse para você durante os próximos meses, como você gostaria que ela fosse?",
+        help: "Pense em frequência, duração, horários, ambiente, nível de dificuldade, variedade dos exercícios e acompanhamento.",
+        example: "Gostaria de treinar três vezes por semana, por cerca de 45 minutos, sem precisar seguir sempre os mesmos dias e com uma opção mais curta para semanas corridas."
+      }
+    ];
+
+    const state = {
+      screen: "intro",
+      cdcIndex: 0,
+      bigFiveIndex: 0,
+      profile: {
+        nome: "",
+        whatsapp: "",
+        email: ""
+      },
+      cdc: {},
+      bigFive: {}
+    };
+
+    const card = document.getElementById("card");
+    const progressWrap = document.getElementById("progressWrap");
+    const progressStage = document.getElementById("progressStage");
+    const progressText = document.getElementById("progressText");
+    const progressBar = document.getElementById("progressBar");
+
+    function escapeHtml(value = "") {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function setProgress(stage, current, total) {
+      progressWrap.style.display = "block";
+      progressStage.textContent = stage;
+      progressText.textContent = `${current} de ${total}`;
+      progressBar.style.width = `${Math.round((current / total) * 100)}%`;
+    }
+
+    function hideProgress() {
+      progressWrap.style.display = "none";
+    }
+
+    function renderIntro() {
+      hideProgress();
+      card.innerHTML = `
+        <span class="eyebrow">Diagnóstico inicial</span>
+        <h1>Antes de começar, queremos conhecer você um pouco melhor.</h1>
+        <p class="lead">Este questionário vai nos ajudar a entender sua rotina, sua experiência com o treino e o que pode facilitar ou dificultar sua consistência.</p>
+        <p>Suas respostas serão usadas para adaptar melhor seu treinamento e a forma como vamos acompanhar você durante a Mentoria Código da Consistência.</p>
+        <p>Não existem respostas certas ou erradas. Responda da forma mais sincera e natural possível.</p>
+        <span class="time">Tempo estimado: 5 a 8 minutos</span>
+
+        <div style="margin-top:26px">
+          <div class="fields-grid">
+            <div class="field">
+              <label for="nome">Seu nome</label>
+              <input id="nome" type="text" autocomplete="name" value="${escapeHtml(state.profile.nome)}" placeholder="Ex.: Mariana Silva">
+            </div>
+            <div class="field">
+              <label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" type="tel" autocomplete="tel" value="${escapeHtml(state.profile.whatsapp)}" placeholder="Ex.: (11) 99999-9999">
+            </div>
+          </div>
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input id="email" type="email" autocomplete="email" value="${escapeHtml(state.profile.email)}" placeholder="Ex.: mariana@email.com">
+          </div>
+        </div>
+
+        <div class="actions">
+          <span></span>
+          <button class="btn-primary" onclick="startCDC()">Começar</button>
+        </div>
+        <div class="error" id="introError">Preencha nome, WhatsApp e e-mail para continuar.</div>
+      `;
+    }
+
+    window.startCDC = function() {
+      const nome = document.getElementById("nome").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const email = document.getElementById("email").value.trim();
+
+      if (!nome || !whatsapp || !email) {
+        document.getElementById("introError").style.display = "block";
+        return;
+      }
+
+      state.profile = { nome, whatsapp, email };
+      state.screen = "cdc";
+      state.cdcIndex = 0;
+      renderCDC();
+    }
+
+    function renderCDC() {
+      const q = cdcQuestions[state.cdcIndex];
+      setProgress("Etapa 1 de 2 · Sua rotina e seu treino", state.cdcIndex + 1, cdcQuestions.length);
+
+      card.innerHTML = `
+        <span class="eyebrow">Diagnóstico CDC</span>
+        <h2 class="question-title">${q.title}</h2>
+        <div class="question-help">${q.help}</div>
+        <div class="example"><strong>Exemplo de resposta:</strong><br>${q.example}</div>
+
+        <textarea id="answer" placeholder="Escreva sua resposta aqui...">${escapeHtml(state.cdc[q.id] || "")}</textarea>
+        <div class="error" id="questionError">Escreva uma resposta para continuar.</div>
+
+        <div class="actions">
+          <button class="btn-secondary" onclick="prevCDC()">← Voltar</button>
+          <button class="btn-primary" onclick="nextCDC()">Continuar →</button>
+        </div>
+      `;
+
+      setTimeout(() => document.getElementById("answer")?.focus(), 50);
+    }
+
+    window.nextCDC = function() {
+      const q = cdcQuestions[state.cdcIndex];
+      const answer = document.getElementById("answer").value.trim();
+
+      if (!answer) {
+        document.getElementById("questionError").style.display = "block";
+        return;
+      }
+
+      state.cdc[q.id] = answer;
+
+      if (state.cdcIndex < cdcQuestions.length - 1) {
+        state.cdcIndex++;
+        renderCDC();
+      } else {
+        state.screen = "bigfive-intro";
+        renderBigFiveIntro();
+      }
+    }
+
+    window.prevCDC = function() {
+      const q = cdcQuestions[state.cdcIndex];
+      const answer = document.getElementById("answer").value.trim();
+      if (answer) state.cdc[q.id] = answer;
+
+      if (state.cdcIndex > 0) {
+        state.cdcIndex--;
+        renderCDC();
+      } else {
+        state.screen = "intro";
+        renderIntro();
+      }
+    }
+
+    function renderBigFiveIntro() {
+      hideProgress();
+      card.innerHTML = `
+        <span class="eyebrow">Etapa 2 de 2</span>
+        <h1>Agora vamos conhecer um pouco melhor como você costuma funcionar.</h1>
+        <p class="lead">Você já nos contou sobre sua rotina, suas experiências com o treino e o que espera conquistar.</p>
+        <p>Nesta segunda etapa, você responderá <strong>15 afirmações rápidas</strong> sobre comportamentos e formas de agir no dia a dia.</p>
+        <p>Elas são baseadas no modelo Big Five e vão nos ajudar a entender tendências que podem influenciar sua organização, sua adaptação à rotina e a forma como mantém novos hábitos.</p>
+        <p><strong>O objetivo não é definir ou rotular sua personalidade.</strong> Queremos apenas encontrar estratégias que façam mais sentido para você.</p>
+
+        <div class="example">
+          Para cada afirmação, escolha a opção que melhor representa como você costuma ser na maior parte do tempo.<br><br>
+          <strong>Exemplo:</strong> se a frase “Costumo planejar minhas tarefas com antecedência” descreve bastante você, marque “Concordo” ou “Concordo totalmente”.
+        </div>
+
+        <div class="actions">
+          <button class="btn-secondary" onclick="backToCDC()">← Voltar</button>
+          <button class="btn-primary" onclick="startBigFive()">Continuar</button>
+        </div>
+      `;
+    }
+
+    window.backToCDC = function() {
+      state.screen = "cdc";
+      state.cdcIndex = cdcQuestions.length - 1;
+      renderCDC();
+    }
+
+    window.startBigFive = function() {
+      state.screen = "bigfive";
+      state.bigFiveIndex = 0;
+      renderBigFive();
+    }
+
+    function renderBigFive() {
+      const q = bigFiveItems[state.bigFiveIndex];
+      setProgress("Etapa 2 de 2 · Como você costuma funcionar", state.bigFiveIndex + 1, bigFiveItems.length);
+
+      const selected = state.bigFive[q.id];
+
+      card.innerHTML = `
+        <span class="eyebrow">Big Five</span>
+        <h2 class="question-title">${q.text}</h2>
+        <div class="question-help">Escolha a opção que melhor representa como você costuma ser na maior parte do tempo.</div>
+
+        <div class="scale">
+          ${scaleLabels.map((label, i) => {
+            const value = i + 1;
+            return `
+              <div class="scale-option">
+                <input type="radio" name="scale" id="scale_${value}" value="${value}" ${Number(selected) === value ? "checked" : ""}>
+                <label for="scale_${value}">
+                  <span class="scale-dot"></span>
+                  <span>${label}</span>
+                </label>
+              </div>
+            `;
+          }).join("")}
+        </div>
+
+        <div class="error" id="questionError">Escolha uma opção para continuar.</div>
+
+        <div class="actions">
+          <button class="btn-secondary" onclick="prevBigFive()">← Voltar</button>
+          <button class="btn-primary" onclick="nextBigFive()">${state.bigFiveIndex === bigFiveItems.length - 1 ? "Finalizar" : "Continuar →"}</button>
+        </div>
+      `;
+    }
+
+    function currentScaleValue() {
+      const checked = document.querySelector('input[name="scale"]:checked');
+      return checked ? Number(checked.value) : null;
+    }
+
+    window.nextBigFive = async function() {
+      const q = bigFiveItems[state.bigFiveIndex];
+      const value = currentScaleValue();
+
+      if (!value) {
+        document.getElementById("questionError").style.display = "block";
+        return;
+      }
+
+      state.bigFive[q.id] = value;
+
+      if (state.bigFiveIndex < bigFiveItems.length - 1) {
+        state.bigFiveIndex++;
+        renderBigFive();
+      } else {
+        await submitAll();
+      }
+    }
+
+    window.prevBigFive = function() {
+      const q = bigFiveItems[state.bigFiveIndex];
+      const value = currentScaleValue();
+      if (value) state.bigFive[q.id] = value;
+
+      if (state.bigFiveIndex > 0) {
+        state.bigFiveIndex--;
+        renderBigFive();
+      } else {
+        state.screen = "bigfive-intro";
+        renderBigFiveIntro();
+      }
+    }
+
+    function calculateBigFive() {
+      const buckets = {
+        extroversao: [],
+        amabilidade: [],
+        conscienciosidade: [],
+        estabilidade_emocional: [],
+        abertura: []
+      };
+
+      bigFiveItems.forEach(item => {
+        const raw = Number(state.bigFive[item.id]);
+        const scored = item.reverse ? 6 - raw : raw;
+        buckets[item.trait].push(scored);
+      });
+
+      const result = {};
+      Object.entries(buckets).forEach(([trait, values]) => {
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        result[trait] = Number(mean.toFixed(2));
+      });
+
+      return result;
+    }
+
+    async function submitAll() {
+      const scores = calculateBigFive();
+
+      const payload = {
+        data_envio: new Date().toISOString(),
+        nome: state.profile.nome,
+        whatsapp: state.profile.whatsapp,
+        email: state.profile.email,
+        ...state.cdc,
+        ...state.bigFive,
+        score_extroversao: scores.extroversao,
+        score_amabilidade: scores.amabilidade,
+        score_conscienciosidade: scores.conscienciosidade,
+        score_estabilidade_emocional: scores.estabilidade_emocional,
+        score_abertura: scores.abertura,
+        origem: "onboarding_cdc_v1"
+      };
+
+      hideProgress();
+      card.innerHTML = `
+        <span class="eyebrow">Salvando respostas</span>
+        <h2>Estamos registrando seu diagnóstico.</h2>
+        <p>Isso leva apenas alguns instantes.</p>
+        <div class="status">Enviando...</div>
+      `;
+
+      // Se ainda não houver webhook configurado, salva uma cópia local
+      // e mostra a tela final para permitir testar todo o fluxo visual.
+      if (!WEBHOOK_URL) {
+        localStorage.setItem("cdc_onboarding_last_submission", JSON.stringify(payload));
+        renderSuccess(true);
+        return;
+      }
+
+      try {
+        await fetch(WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        localStorage.setItem("cdc_onboarding_last_submission", JSON.stringify(payload));
+        renderSuccess(false);
+      } catch (error) {
+        console.error(error);
+        renderSubmitError();
+      }
+    }
+
+    function renderSuccess(localOnly = false) {
+      hideProgress();
+      card.innerHTML = `
+        <span class="eyebrow">Diagnóstico concluído</span>
+        <h1>Pronto. Agora conhecemos você um pouco melhor.</h1>
+        <p class="lead">Suas respostas serão consideradas na construção da sua estratégia dentro da Mentoria Código da Consistência.</p>
+
+        <ul class="mini-list">
+          <li>organização do seu treino;</li>
+          <li>barreiras que precisamos reduzir;</li>
+          <li>adaptação da rotina;</li>
+          <li>estratégias para facilitar sua consistência;</li>
+          <li>forma de acompanhamento mais adequada para você.</li>
+        </ul>
+
+        <div class="example" style="margin-top:22px">
+          A ideia não é fazer você se adaptar ao método.<br>
+          <strong>É adaptar o método para que ele funcione melhor dentro da sua vida.</strong>
+        </div>
+
+        ${localOnly ? `<p class="status">Modo de teste: as respostas foram salvas apenas neste navegador porque o webhook ainda não foi configurado.</p>` : ""}
+      `;
+    }
+
+    function renderSubmitError() {
+      hideProgress();
+      card.innerHTML = `
+        <span class="eyebrow">Não foi possível enviar</span>
+        <h2>Suas respostas continuam salvas nesta página.</h2>
+        <p>Verifique sua conexão e tente novamente.</p>
+        <div class="actions">
+          <span></span>
+          <button class="btn-primary" onclick="submitAll()">Tentar novamente</button>
+        </div>
+      `;
+    }
+
+    renderIntro();
+  </script>
+</body>
+</html>
