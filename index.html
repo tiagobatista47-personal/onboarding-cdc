@@ -937,6 +937,63 @@
       };
     }
 
+    function sendToWebhook(payload) {
+      return new Promise((resolve, reject) => {
+        try {
+          const iframeName = "cdcWebhookFrame_" + Date.now();
+
+          const iframe = document.createElement("iframe");
+          iframe.name = iframeName;
+          iframe.style.display = "none";
+          document.body.appendChild(iframe);
+
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = WEBHOOK_URL;
+          form.target = iframeName;
+          form.style.display = "none";
+
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "payload";
+          input.value = JSON.stringify(payload);
+
+          form.appendChild(input);
+          document.body.appendChild(form);
+
+          let finished = false;
+
+          const cleanup = () => {
+            setTimeout(() => {
+              form.remove();
+              iframe.remove();
+            }, 500);
+          };
+
+          iframe.onload = () => {
+            if (finished) return;
+            finished = true;
+            cleanup();
+            resolve();
+          };
+
+          form.submit();
+
+          // Fallback: como o Apps Script pode redirecionar a resposta,
+          // consideramos o envio concluído após alguns segundos.
+          setTimeout(() => {
+            if (finished) return;
+            finished = true;
+            cleanup();
+            resolve();
+          }, 3500);
+
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
     async function submitAll() {
       const scores = calculateBigFive();
       const prognostico = buildAutomatedPrognosis(scores);
@@ -982,12 +1039,7 @@
       }
 
       try {
-        await fetch(WEBHOOK_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
+        await sendToWebhook(payload);
 
         localStorage.setItem("cdc_onboarding_last_submission", JSON.stringify(payload));
         renderSuccess(false, scores);
